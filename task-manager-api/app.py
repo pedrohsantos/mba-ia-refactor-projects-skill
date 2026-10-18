@@ -1,34 +1,58 @@
+"""Composition root e ponto de entrada (python app.py)."""
+import logging
+from datetime import datetime
+
 from flask import Flask
 from flask_cors import CORS
+from itsdangerous import URLSafeTimedSerializer
+
+from config.settings import Settings
+from controllers.category_controller import CategoryController
+from controllers.report_controller import ReportController
+from controllers.task_controller import TaskController
+from controllers.user_controller import UserController
 from database import db
-from routes.task_routes import task_bp
-from routes.user_routes import user_bp
-from routes.report_routes import report_bp
-import os, sys, json, datetime
+from middlewares.error_handler import register_error_handlers
+from routes.category_routes import create_category_blueprint
+from routes.report_routes import create_report_blueprint
+from routes.task_routes import create_task_blueprint
+from routes.user_routes import create_user_blueprint
+from services.notification_service import NotificationService
 
-app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = 'super-secret-key-123'
+def create_app(settings=Settings):
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
-CORS(app)
-db.init_app(app)
+    app = Flask(__name__)
+    app.config.from_object(settings)
+    CORS(app, origins=settings.CORS_ORIGINS)
+    db.init_app(app)
 
-app.register_blueprint(task_bp)
-app.register_blueprint(user_bp)
-app.register_blueprint(report_bp)
+    token_signer = URLSafeTimedSerializer(settings.SECRET_KEY, salt="auth-token")
+    notifications = NotificationService.from_settings(settings)
 
-@app.route('/health')
-def health():
-    return {'status': 'ok', 'timestamp': str(datetime.datetime.now())}
+    app.register_blueprint(create_task_blueprint(TaskController(notifications)))
+    app.register_blueprint(create_user_blueprint(UserController(token_signer)))
+    app.register_blueprint(create_report_blueprint(ReportController()))
+    app.register_blueprint(create_category_blueprint(CategoryController()))
 
-@app.route('/')
-def index():
-    return {'message': 'Task Manager API', 'version': '1.0'}
+    @app.get("/health")
+    def health():
+        return {"status": "ok", "timestamp": str(datetime.now())}
 
-with app.app_context():
-    db.create_all()
+    @app.get("/")
+    def index():
+        return {"message": "Task Manager API", "version": settings.APP_VERSION}
 
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    register_error_handlers(app)
+
+    with app.app_context():
+        db.create_all()
+
+    return app
+
+
+app = create_app()
+
+if __name__ == "__main__":
+    app.run(host=Settings.HOST, port=Settings.PORT, debug=Settings.DEBUG)
