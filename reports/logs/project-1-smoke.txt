@@ -1,0 +1,60 @@
+# Projeto 1 — baseline (código original)
+GET    /                                             200  {   "endpoints": {     "health": "/health",     "login": "/login",     "pedidos": "/pedido
+GET    /health                                       200  {   "ambiente": "producao",   "counts": {     "pedidos": 0,     "produtos": 10,     "usuar
+GET    /produtos                                     200  {   "dados": [     {       "ativo": 1,       "categoria": "informatica",       "criado_em"
+GET    /produtos/busca?q=mouse&preco_max=100         200  {   "dados": [     {       "ativo": 1,       "categoria": "informatica",       "criado_em"
+GET    /produtos/1                                   200  {   "dados": {     "ativo": 1,     "categoria": "informatica",     "criado_em": "2026-10-1
+GET    /produtos/999                                 404  {   "erro": "Produto n\u00e3o encontrado",   "sucesso": false } 
+POST   /produtos                                     201  {   "dados": {     "id": 11   },   "mensagem": "Produto criado",   "sucesso": true } 
+POST   /produtos                                     400  {   "erro": "Pre\u00e7o n\u00e3o pode ser negativo" } 
+PUT    /produtos/11                                  200  {   "mensagem": "Produto atualizado",   "sucesso": true } 
+DELETE /produtos/11                                  200  {   "mensagem": "Produto deletado",   "sucesso": true } 
+GET    /usuarios                                     200  {   "dados": [     {       "criado_em": "2026-10-18 17:58:58",       "email": "admin@loja.
+GET    /usuarios/1                                   200  {   "dados": {     "criado_em": "2026-10-18 17:58:58",     "email": "admin@loja.com",     
+POST   /usuarios                                     201  {   "dados": {     "id": 4   },   "sucesso": true } 
+POST   /login                                        200  {   "dados": {     "email": "teste@x.com",     "id": 4,     "nome": "Teste",     "tipo": "
+POST   /login                                        401  {   "erro": "Email ou senha inv\u00e1lidos",   "sucesso": false } 
+POST   /pedidos                                      201  {   "dados": {     "pedido_id": 1,     "total": 479.7   },   "mensagem": "Pedido criado co
+POST   /pedidos                                      400  {   "erro": "Estoque insuficiente para Notebook Gamer",   "sucesso": false } 
+GET    /pedidos                                      200  {   "dados": [     {       "criado_em": "2026-10-18 17:59:34",       "id": 1,       "itens
+GET    /pedidos/usuario/2                            200  {   "dados": [     {       "criado_em": "2026-10-18 17:59:34",       "id": 1,       "itens
+PUT    /pedidos/1/status                             200  {   "mensagem": "Status atualizado",   "sucesso": true } 
+PUT    /pedidos/1/status                             400  {   "erro": "Status inv\u00e1lido" } 
+GET    /relatorios/vendas                            200  {   "dados": {     "desconto_aplicavel": 0,     "faturamento_bruto": 479.7,     "faturamen
+
+# Projeto 1 — após refatoração
+GET    /                                             200  {"endpoints":{"health":"/health","login":"/login","pedidos":"/pedidos","produtos":"/produtos","relat
+GET    /health                                       200  {"counts":{"pedidos":0,"produtos":10,"usuarios":3},"database":"connected","status":"ok","versao":"1.
+GET    /produtos                                     200  {"dados":[{"ativo":1,"categoria":"informatica","criado_em":"2026-10-18 18:14:10","descricao":"Notebo
+GET    /produtos/busca?q=mouse&preco_max=100         200  {"dados":[{"ativo":1,"categoria":"informatica","criado_em":"2026-10-18 18:14:10","descricao":"Mouse 
+GET    /produtos/1                                   200  {"dados":{"ativo":1,"categoria":"informatica","criado_em":"2026-10-18 18:14:10","descricao":"Noteboo
+GET    /produtos/999                                 404  {"erro":"Produto n\u00e3o encontrado","sucesso":false}
+POST   /produtos                                     201  {"dados":{"id":11},"mensagem":"Produto criado","sucesso":true}
+POST   /produtos                                     400  {"erro":"Pre\u00e7o n\u00e3o pode ser negativo","sucesso":false}
+PUT    /produtos/11                                  200  {"mensagem":"Produto atualizado","sucesso":true}
+DELETE /produtos/11                                  200  {"mensagem":"Produto deletado","sucesso":true}
+GET    /usuarios                                     200  {"dados":[{"criado_em":"2026-10-18 18:14:10","email":"admin@loja.com","id":1,"nome":"Admin","tipo":"
+GET    /usuarios/1                                   200  {"dados":{"criado_em":"2026-10-18 18:14:10","email":"admin@loja.com","id":1,"nome":"Admin","tipo":"a
+POST   /usuarios                                     201  {"dados":{"id":4},"sucesso":true}
+POST   /login                                        200  {"dados":{"email":"teste@x.com","id":4,"nome":"Teste","tipo":"cliente"},"mensagem":"Login OK","suces
+POST   /login                                        401  {"erro":"Email ou senha inv\u00e1lidos","sucesso":false}
+POST   /pedidos                                      201  {"dados":{"pedido_id":1,"total":479.7},"mensagem":"Pedido criado com sucesso","sucesso":true}
+POST   /pedidos                                      400  {"erro":"Estoque insuficiente para Notebook Gamer","sucesso":false}
+GET    /pedidos                                      200  {"dados":[{"criado_em":"2026-10-18 18:14:14","id":1,"itens":[{"preco_unitario":89.9,"produto_id":2,"
+GET    /pedidos/usuario/2                            200  {"dados":[{"criado_em":"2026-10-18 18:14:14","id":1,"itens":[{"preco_unitario":89.9,"produto_id":2,"
+PUT    /pedidos/1/status                             200  {"mensagem":"Status atualizado","sucesso":true}
+PUT    /pedidos/1/status                             400  {"erro":"Status inv\u00e1lido","sucesso":false}
+GET    /relatorios/vendas                            200  {"dados":{"desconto_aplicavel":0,"faturamento_bruto":479.7,"faturamento_liquido":479.7,"pedidos_apro
+POST   /produtos                                     400  {"erro":"Pre\u00e7o inv\u00e1lido","sucesso":false}
+POST   /pedidos                                      400  {"erro":"Quantidade deve ser um inteiro positivo","sucesso":false}
+PUT    /pedidos/1/status                             200  {"mensagem":"Status atualizado","sucesso":true}
+GET    /produtos/2                                   200  {"dados":{"ativo":1,"categoria":"informatica","criado_em":"2026-10-18 18:14:10","descricao":"Mouse s
+POST   /login                                        401  {"erro":"Email ou senha inv\u00e1lidos","sucesso":false}
+POST   /admin/query                                  401  {"erro":"Token administrativo inv\u00e1lido","sucesso":false}
+POST   /admin/query                                  200  {"dados":[{"id":1,"nome":"Notebook Gamer"},{"id":2,"nome":"Mouse Wireless"}],"sucesso":true}
+POST   /admin/query                                  400  {"erro":"Apenas consultas SELECT s\u00e3o permitidas","sucesso":false}
+POST   /admin/query                                  400  {"erro":"Query inv\u00e1lida: You can only execute one statement at a time.","sucesso":false}
+POST   /admin/reset-db                               401  {"erro":"Token administrativo inv\u00e1lido","sucesso":false}
+POST   /admin/reset-db                               200  {"mensagem":"Banco de dados resetado","sucesso":true}
+GET    /health                                       200  {"counts":{"pedidos":0,"produtos":0,"usuarios":0},"database":"connected","status":"ok","versao":"1.0
+--- 34 cases, 0 failures (5xx/network)

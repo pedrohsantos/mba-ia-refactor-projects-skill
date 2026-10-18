@@ -1,0 +1,24 @@
+# Projeto 2 â€” baseline (cÃ³digo original)
+POST   /api/checkout                                 200  {"msg":"Sucesso","enrollment_id":2}
+POST   /api/checkout                                 400  Pagamento recusado
+POST   /api/checkout                                 404  Curso não encontrado
+POST   /api/checkout                                 400  Bad Request
+GET    /api/admin/financial-report                   200  [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]
+DELETE /api/users/1                                  200  Usuário deletado, mas as matrículas e pagamentos ficaram sujos no banco.
+GET    /api/admin/financial-report                   200  [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Unknown","paid":997}
+
+# Projeto 2 â€” apÃ³s refatoraÃ§Ã£o
+POST   /api/checkout                                 200  {"msg":"Sucesso","enrollment_id":2}
+POST   /api/checkout                                 400  Pagamento recusado
+POST   /api/checkout                                 404  Curso não encontrado
+POST   /api/checkout                                 400  Bad Request
+GET    /api/admin/financial-report                   200  [{"course":"Clean Architecture","revenue":997,"students":[{"student":"Leonan","paid":997}]},{"course
+DELETE /api/users/1                                  200  Usuário deletado
+GET    /api/admin/financial-report                   200  [{"course":"Clean Architecture","revenue":0,"students":[]},{"course":"Docker","revenue":497,"student
+GET    /api/admin/financial-report                   401  Não autorizado
+GET    /api/admin/financial-report                   401  Não autorizado
+DELETE /api/users/999                                404  Usuário não encontrado
+DELETE /api/users/abc                                400  Bad Request
+POST   /api/checkout                                 400  Bad Request
+POST   /api/checkout                                 200  {"msg":"Sucesso","enrollment_id":3}
+--- 13 cases, 0 failures (5xx/network)

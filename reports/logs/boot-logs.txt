@@ -1,0 +1,26 @@
+== project 1 boot log ==
+SECRET_KEY n„o configurada ó usando chave efÍmera (apenas desenvolvimento)
+ * Serving Flask app 'src.app'
+ * Debug mode: off
+2026-10-18 15:14:10,724 INFO werkzeug: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+2026-10-18 15:14:10,724 INFO werkzeug: Press CTRL+C to quit
+2026-10-18 15:14:14,481 INFO werkzeug: 127.0.0.1 - - [18/Oct/2026 15:14:14] "GET / HTTP/1.1" 200 -
+2026-10-18 15:14:14,498 INFO werkzeug: 127.0.0.1 - - [18/Oct/2026 15:14:14] "GET /health HTTP/1.1" 200 -
+
+== project 2 boot log ==
+2026-10-18T18:18:19.286Z WARN SEED_USER_PASSWORD n√£o configurada ‚Äî usu√°rio de exemplo criado com senha aleat√≥ria
+2026-10-18T18:18:19.333Z INFO LMS API rodando na porta 3000
+2026-10-18T18:18:22.388Z INFO Processando pagamento de 497 no cart√£o ****4444 (gateway simulado)
+2026-10-18T18:18:22.431Z INFO Processando pagamento de 997 no cart√£o ****4444 (gateway simulado)
+2026-10-18T18:18:22.449Z INFO Processando pagamento de 997 no cart√£o ****4999 (gateway simulado)
+
+== project 3 boot log ==
+SECRET_KEY n„o configurada ó usando chave efÍmera (apenas desenvolvimento)
+ * Serving Flask app 'app'
+ * Debug mode: off
+2026-10-18 15:24:22,574 INFO werkzeug: WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+2026-10-18 15:24:22,574 INFO werkzeug: Press CTRL+C to quit
+2026-10-18 15:24:27,187 INFO werkzeug: 127.0.0.1 - - [18/Oct/2026 15:24:27] "GET / HTTP/1.1" 200 -
+2026-10-18 15:24:27,206 INFO werkzeug: 127.0.0.1 - - [18/Oct/2026 15:24:27] "GET /health HTTP/1.1" 200 -

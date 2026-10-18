@@ -1,0 +1,72 @@
+# Projeto 3 — baseline (código original)
+GET    /                                             200  {   "message": "Task Manager API",   "version": "1.0" } 
+GET    /health                                       200  {   "status": "ok",   "timestamp": "2026-10-18 15:03:16.347760" } 
+GET    /tasks                                        200  [   {     "category_id": 1,     "category_name": "Backend",     "created_at": "2026-10-18 
+GET    /tasks/1                                      200  {   "category_id": 1,   "created_at": "2026-10-18 18:02:56.625422",   "description": "Adic
+GET    /tasks/999                                    404  {   "error": "Task n\u00e3o encontrada" } 
+GET    /tasks/search?q=API&status=pending            200  [   {     "category_id": 1,     "created_at": "2026-10-18 18:02:56.625432",     "descripti
+GET    /tasks/stats                                  200  {   "cancelled": 1,   "completion_rate": 10.0,   "done": 1,   "in_progress": 2,   "overdue
+POST   /tasks                                        201  {   "category_id": 1,   "created_at": "2026-10-18 18:03:28.615088",   "description": "",  
+POST   /tasks                                        400  {   "error": "T\u00edtulo muito curto" } 
+POST   /tasks                                        400  {   "error": "Prioridade deve ser entre 1 e 5" } 
+PUT    /tasks/11                                     200  {   "category_id": 1,   "created_at": "2026-10-18 18:03:28.615088",   "description": "",  
+PUT    /tasks/11                                     400  {   "error": "Status inv\u00e1lido" } 
+DELETE /tasks/11                                     200  {   "message": "Task deletada com sucesso" } 
+GET    /users                                        200  [   {     "active": true,     "created_at": "2026-10-18 18:02:56.614557",     "email": "jo
+GET    /users/1                                      200  {   "active": true,   "created_at": "2026-10-18 18:02:56.614557",   "email": "joao@email.c
+GET    /users/1/tasks                                200  [   {     "created_at": "2026-10-18 18:02:56.625422",     "description": "Adicionar autent
+POST   /users                                        201  {   "active": true,   "created_at": "2026-10-18 18:03:47.091403",   "email": "ana@email.co
+POST   /users                                        409  {   "error": "Email j\u00e1 cadastrado" } 
+POST   /users                                        400  {   "error": "Email inv\u00e1lido" } 
+PUT    /users/4                                      200  {   "active": true,   "created_at": "2026-10-18 18:03:47.091403",   "email": "ana@email.co
+POST   /login                                        200  {   "message": "Login realizado com sucesso",   "token": "fake-jwt-token-4",   "user": {  
+POST   /login                                        401  {   "error": "Credenciais inv\u00e1lidas" } 
+DELETE /users/4                                      200  {   "message": "Usu\u00e1rio deletado com sucesso" } 
+GET    /reports/summary                              200  {   "generated_at": "2026-10-18 18:04:01.375602",   "overdue": {     "count": 2,     "task
+GET    /reports/user/1                               200  {   "statistics": {     "cancelled": 0,     "completion_rate": 0.0,     "done": 0,     "hi
+GET    /categories                                   200  [   {     "color": "#3498db",     "created_at": "2026-10-18 18:02:56.618277",     "descrip
+POST   /categories                                   201  {   "color": "#123456",   "created_at": "2026-10-18 18:04:07.497434",   "description": "",
+PUT    /categories/5                                 200  {   "color": "#123456",   "created_at": "2026-10-18 18:04:07.497434",   "description": "Qu
+DELETE /categories/5                                 200  {   "message": "Categoria deletada" } 
+
+# Projeto 3 — após refatoração
+GET    /                                             200  {"message":"Task Manager API","version":"1.0"}
+GET    /health                                       200  {"status":"ok","timestamp":"2026-10-18 15:24:27.205878"}
+GET    /tasks                                        200  [{"category_id":1,"category_name":"Backend","created_at":"2026-10-18 18:24:11.319084","description":
+GET    /tasks/1                                      200  {"category_id":1,"created_at":"2026-10-18 18:24:11.319084","description":"Adicionar autentica\u00e7\
+GET    /tasks/999                                    404  {"error":"Task n\u00e3o encontrada"}
+GET    /tasks/search?q=API&status=pending            200  [{"category_id":1,"created_at":"2026-10-18 18:24:11.319091","description":"Endpoints retornam todos 
+GET    /tasks/stats                                  200  {"cancelled":1,"completion_rate":10.0,"done":1,"in_progress":2,"overdue":2,"pending":6,"total":10}
+POST   /tasks                                        201  {"category_id":1,"created_at":"2026-10-18 18:24:27.291008","description":"","due_date":"2030-01-01 0
+POST   /tasks                                        400  {"error":"T\u00edtulo muito curto"}
+POST   /tasks                                        400  {"error":"Prioridade deve ser entre 1 e 5"}
+PUT    /tasks/11                                     200  {"category_id":1,"created_at":"2026-10-18 18:24:27.291008","description":"","due_date":"2030-01-01 0
+PUT    /tasks/11                                     400  {"error":"Status inv\u00e1lido"}
+DELETE /tasks/11                                     200  {"message":"Task deletada com sucesso"}
+GET    /users                                        200  [{"active":true,"created_at":"2026-10-18 18:24:11.316646","email":"joao@email.com","id":1,"name":"Jo
+GET    /users/1                                      200  {"active":true,"created_at":"2026-10-18 18:24:11.316646","email":"joao@email.com","id":1,"name":"Jo\
+GET    /users/1/tasks                                200  [{"created_at":"2026-10-18 18:24:11.319084","description":"Adicionar autentica\u00e7\u00e3o real com
+POST   /users                                        201  {"active":true,"created_at":"2026-10-18 18:24:27.541241","email":"ana@email.com","id":4,"name":"Ana"
+POST   /users                                        409  {"error":"Email j\u00e1 cadastrado"}
+POST   /users                                        400  {"error":"Email inv\u00e1lido"}
+PUT    /users/4                                      200  {"active":true,"created_at":"2026-10-18 18:24:27.541241","email":"ana@email.com","id":4,"name":"Ana 
+POST   /login                                        200  {"message":"Login realizado com sucesso","token":"eyJ1c2VyX2lkIjo0fQ.atUO2w.gIHZIDrz1ZIJzpL3f0Z5fZ5c
+POST   /login                                        401  {"error":"Credenciais inv\u00e1lidas"}
+DELETE /users/4                                      200  {"message":"Usu\u00e1rio deletado com sucesso"}
+GET    /reports/summary                              200  {"generated_at":"2026-10-18 18:24:27.894099","overdue":{"count":2,"tasks":[{"days_overdue":3,"due_da
+GET    /reports/user/1                               200  {"statistics":{"cancelled":0,"completion_rate":0.0,"done":0,"high_priority":2,"in_progress":0,"overd
+GET    /categories                                   200  [{"color":"#3498db","created_at":"2026-10-18 18:24:11.315716","description":"Tarefas de backend","id
+POST   /categories                                   201  {"color":"#123456","created_at":"2026-10-18 18:24:27.928739","description":"","id":5,"name":"QA"}
+PUT    /categories/5                                 200  {"color":"#123456","created_at":"2026-10-18 18:24:27.928739","description":"Qualidade","id":5,"name"
+DELETE /categories/5                                 200  {"message":"Categoria deletada"}
+POST   /tasks                                        400  {"error":"Prioridade deve ser entre 1 e 5"}
+GET    /tasks/search?priority=abc                    400  {"error":"Prioridade inv\u00e1lida"}
+PUT    /categories/1                                 400  {"error":"Dados inv\u00e1lidos"}
+POST   /login                                        200  {"message":"Login realizado com sucesso","token":"eyJ1c2VyX2lkIjoxfQ.atUO3A.SxFXup1nVIa_YeM_Z94cevby
+GET    /users/1                                      200  {"active":true,"created_at":"2026-10-18 18:24:11.316646","email":"joao@email.com","id":1,"name":"Jo\
+DELETE /categories/2                                 200  {"message":"Categoria deletada"}
+GET    /tasks/2                                      200  {"category_id":null,"created_at":"2026-10-18 18:24:11.319087","description":"Tela de login responsiv
+DELETE /users/3                                      200  {"message":"Usu\u00e1rio deletado com sucesso"}
+GET    /tasks/stats                                  200  {"cancelled":0,"completion_rate":0.0,"done":0,"in_progress":2,"overdue":2,"pending":5,"total":7}
+GET    /rota-inexistente                             404  {"error":"The requested URL was not found on the server. If you entered the URL manually please chec
+--- 39 cases, 0 failures (5xx/network)
