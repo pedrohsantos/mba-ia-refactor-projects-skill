@@ -17,7 +17,7 @@ Concrete transformations. Each one says which anti-patterns it fixes, the steps,
 | T-10 | Replace deprecated APIs | AP-16 |
 | T-11 | Transactions, async/await and referential integrity | AP-10, AP-17 |
 | T-12 | Constants, naming, logging, dead code | AP-18 … AP-22 |
-| T-13 | Protect or neutralize dangerous admin endpoints | AP-04 |
+| T-13 | Protect dangerous admin endpoints + role-based authorization (T-13b) | AP-04 |
 | T-14 | Validation layer | AP-13, AP-14 |
 
 ---
@@ -572,6 +572,119 @@ module.exports = (config) => (req, res, next) => {
   next();
 };
 ```
+
+### T-13b — Role-based authorization for user management (fixes broken auth / privilege escalation)
+
+When the app has users with roles, closing AP-04 requires **all three** steps — a signed token alone is only step 1:
+
+1. **Signed, expiring token** issued by login (`itsdangerous`/JWT in Python, `jsonwebtoken` or HMAC in Node), verified on every protected request (`Authorization: Bearer <token>`).
+2. **Authorization middleware**: `require_auth` loads the current user from the token (401 if missing/invalid/expired/inactive); `require_admin` additionally checks the role (403 if not admin). Apply them to user-management routes:
+   - `DELETE /users/<id>` → admin only.
+   - `PUT /users/<id>` → the user themself or an admin; only an admin may change `role` or `active`.
+   - any route that lists/changes other users' privileges → admin only.
+3. **No privileged fields on public endpoints**: public sign-up (`POST /users`) creates `role = "user"`; a request that sends another `role` without an authenticated admin is rejected (403). Never trust `role`, `is_admin`, `active` from an anonymous body.
+
+Keep the first admin reachable: the seed / a bootstrap env var creates it — never a public endpoint.
+
+**Before**
+```python
+@user_bp.route('/users', methods=['POST'])
+def create_user():
+    role = data.get('role', 'user')            # anonymous caller chooses "admin"
+    ...
+@user_bp.route('/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id): ...                 # no auth at all
+return {'token': 'fake-jwt-token-' + str(user.id)}   # forgeable
+```
+**After**
+```python
+# middlewares/auth.py
+from functools import wraps
+from flask import current_app, g, request
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+
+def _signer():
+    return URLSafeTimedSerializer(current_app.config["SECRET_KEY"], salt="auth-token")
+
+def issue_token(user):
+    return _signer().dumps({"user_id": user.id})
+
+def load_current_user():
+    """Return the authenticated user or None (anonymous). Invalid tokens raise 401."""
+    header = request.headers.get("Authorization", "")
+    if not header:
+        return None
+    scheme, _, token = header.partition(" ")
+    if scheme.lower() != "bearer" or not token:
+        raise UnauthorizedError("Token inválido")
+    try:
+        payload = _signer().loads(token, max_age=current_app.config["AUTH_TOKEN_MAX_AGE_SECONDS"])
+    except (BadSignature, SignatureExpired):
+        raise UnauthorizedError("Token inválido ou expirado")
+    user = User.get(payload.get("user_id"))
+    if not user or not user.active:
+        raise UnauthorizedError("Token inválido ou expirado")
+    return user
+
+def require_auth(view):
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        g.current_user = load_current_user()
+        if g.current_user is None:
+            raise UnauthorizedError("Autenticação necessária")
+        return view(*args, **kwargs)
+    return wrapper
+
+def require_admin(view):
+    @require_auth
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not g.current_user.is_admin():
+            raise ForbiddenError("Apenas administradores")
+        return view(*args, **kwargs)
+    return wrapper
+
+# routes/user_routes.py — the view passes the actor; the controller decides
+@user_bp.post("/users")
+def create_user():
+    return jsonify(controller.create_user(request.get_json(silent=True), actor=load_current_user())), 201
+
+@user_bp.put("/users/<int:user_id>")
+@require_auth
+def update_user(user_id):
+    return jsonify(controller.update_user(user_id, request.get_json(silent=True), actor=g.current_user)), 200
+
+@user_bp.delete("/users/<int:user_id>")
+@require_admin
+def delete_user(user_id): ...
+
+# controllers/user_controller.py
+def create_user(self, data, actor=None):
+    role = data.get("role", ROLE_USER)
+    if role != ROLE_USER and not (actor and actor.is_admin()):
+        raise ForbiddenError("Apenas administradores podem definir role")
+
+def update_user(self, user_id, data, actor):
+    if not actor.is_admin() and actor.id != user_id:
+        raise ForbiddenError("Sem permissão para alterar este usuário")
+    if not actor.is_admin() and ({"role", "active"} & data.keys()):
+        raise ForbiddenError("Apenas administradores podem alterar role/active")
+```
+**Express equivalent**
+```js
+// middlewares/auth.js
+const requireAuth = ({ verifyToken, userModel }) => async (req, res, next) => {
+  const [scheme, token] = (req.get('Authorization') || '').split(' ');
+  if (scheme !== 'Bearer' || !token) return next(new UnauthorizedError());
+  const payload = verifyToken(token);                    // throws on bad signature / expiry
+  req.currentUser = await userModel.findById(payload.userId);
+  return req.currentUser ? next() : next(new UnauthorizedError());
+};
+const requireAdmin = (req, res, next) => (req.currentUser.role === 'admin' ? next() : next(new ForbiddenError()));
+router.delete('/users/:id', requireAuth(deps), requireAdmin, asyncHandler(...));
+```
+Validation must include the negative cases: anonymous `POST /users` with `role: admin` → 403, anonymous `PUT`/`DELETE /users/<id>` → 401,
+non-admin token on `DELETE` → 403, non-admin changing own `role` → 403, admin token → success.
 
 ---
 

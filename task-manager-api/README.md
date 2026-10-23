@@ -25,3 +25,13 @@ middlewares/        # tratamento de erros centralizado
 services/           # notificações por e-mail (injetado)
 utils/              # exceções, validadores, utcnow
 ```
+
+## Autenticação
+
+`POST /login` retorna um `token` assinado (expira em `AUTH_TOKEN_MAX_AGE_SECONDS`). Envie-o como `Authorization: Bearer <token>`:
+
+- `POST /users` — público, mas cria apenas `role: user`; outro `role` exige token de admin.
+- `PUT /users/<id>` — o próprio usuário ou um admin; `role`/`active` só admin.
+- `DELETE /users/<id>` — apenas admin.
+
+O primeiro admin é criado pelo `seed.py` (`joao@email.com`, senha = `SEED_USER_PASSWORD`).

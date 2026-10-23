@@ -95,7 +95,13 @@ Do not continue until the user answers. If the user answers anything other than 
    6. Composition root / entry point (app factory, dependency wiring)
    7. Security hardening (hashing, sensitive-field removal, admin route protection)
    8. Low-severity cleanup (naming, constants, dead code, logging)
-5. **Preserve the public contract**: same HTTP methods, paths, status codes and response field names for every endpoint in the inventory. Allowed, intentional contract changes are only the ones that remove a vulnerability (e.g. no longer returning password hashes or secrets, requiring an admin token on destructive admin routes). List every intentional change in the final summary.
+   **No deferral of CRITICAL/HIGH security findings.** Every CRITICAL or HIGH finding must end Phase 3 as *fixed*.
+   "Partially fixed" or "deferred" is only acceptable for MEDIUM/LOW findings, or for a CRITICAL/HIGH item whose fix does
+   not remove a vulnerability (e.g. a major framework upgrade). "It would change the contract" is **not** a reason to defer:
+   removing a vulnerability is exactly what justifies a contract change (rule 5). Broken auth / privilege escalation is
+   fixed with the full T-13 pattern (signed token **and** role authorization **and** no privileged fields on public endpoints),
+   never with the token alone.
+5. **Preserve the public contract**: same HTTP methods, paths, status codes and response field names for every endpoint in the inventory. Allowed, intentional contract changes are only the ones that remove a vulnerability (e.g. no longer returning password hashes or secrets, requiring an admin token on destructive admin routes, requiring an authenticated admin on user-management routes, rejecting `role`/privilege fields on public sign-up). List every intentional change in the final summary.
 6. Delete files that became obsolete (e.g. old god-files) only after their content has been moved; keep the original run command working (`python app.py`, `npm start`, …) or update the project README if it must change.
 7. Update dependency manifests if you added a library, and add a `.env.example` listing every environment variable (never real secrets). Do not commit `.env` files.
 8. **Validate** (validation.md §2–§4): boot the refactored app, replay the baseline calls, compare. Run a final grep-based scan for the CRITICAL/HIGH detection signals to prove they are gone. Fix and repeat until it passes — never report success without having actually executed the checks. Stop any server you started.
@@ -109,7 +115,7 @@ PHASE 3: REFACTORING COMPLETE
 <tree of the new structure, source files only>
 
 ## Findings addressed
-<ID list: fixed / partially fixed / deferred (with reason)>
+<ID list: fixed / partially fixed / deferred (with reason) — CRITICAL/HIGH must all be "fixed" (see step 4)>
 
 ## Intentional contract changes
 <list, or "none">

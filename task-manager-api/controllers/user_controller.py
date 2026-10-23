@@ -10,6 +10,7 @@ from utils.validators import is_valid_email, require_payload
 logger = logging.getLogger(__name__)
 
 USER_TASK_FIELDS = ("id", "title", "description", "status", "priority", "created_at", "due_date")
+ADMIN_ONLY_FIELDS = ("role", "active")
 
 
 def _validate_email(email):
@@ -30,9 +31,13 @@ def _ensure_email_available(email, current_user_id=None):
         raise ConflictError("Email já cadastrado")
 
 
+def _is_admin(actor):
+    return actor is not None and actor.is_admin()
+
+
 class UserController:
-    def __init__(self, token_signer):
-        self._token_signer = token_signer
+    def __init__(self, token_service):
+        self._token_service = token_service
 
     def list_users(self):
         result = []
@@ -48,7 +53,8 @@ class UserController:
         data["tasks"] = [task.to_dict() for task in Task.list_by_user(user_id)]
         return data
 
-    def create_user(self, data):
+    def create_user(self, data, actor=None):
+        """Cadastro público cria sempre role "user"; outro role só com um admin autenticado."""
         require_payload(data)
         name, email, password = data.get("name"), data.get("email"), data.get("password")
         role = data.get("role", ROLE_USER)
@@ -64,6 +70,8 @@ class UserController:
             raise ValidationError("Senha deve ter no mínimo 4 caracteres")
         _ensure_email_available(email)
         _validate_role(role)
+        if role != ROLE_USER and not _is_admin(actor):
+            raise ForbiddenError("Apenas administradores podem definir role")
 
         user = User(name=name, email=email, role=role)
         user.set_password(password)
@@ -71,9 +79,14 @@ class UserController:
         logger.info("Usuário criado: %s", user.id)
         return user.to_dict()
 
-    def update_user(self, user_id, data):
+    def update_user(self, user_id, data, actor):
+        """O próprio usuário ou um admin; role/active só podem ser alterados por admin."""
+        if not _is_admin(actor) and actor.id != user_id:
+            raise ForbiddenError("Sem permissão para alterar este usuário")
         user = self._get_or_404(user_id)
         require_payload(data)
+        if not _is_admin(actor) and any(field in data for field in ADMIN_ONLY_FIELDS):
+            raise ForbiddenError("Apenas administradores podem alterar role ou active")
 
         if "name" in data and not data["name"]:
             raise ValidationError("Nome é obrigatório")
@@ -96,7 +109,7 @@ class UserController:
         return user.to_dict()
 
     def delete_user(self, user_id):
-        # As tasks do usuário são removidas pelo cascade do relacionamento User.tasks.
+        # Rota restrita a admin (middlewares.auth.require_admin). As tasks do usuário são removidas pelo cascade do relacionamento User.tasks.
         self._get_or_404(user_id).delete()
         logger.info("Usuário deletado: %s", user_id)
 
@@ -127,7 +140,7 @@ class UserController:
         return {
             "message": "Login realizado com sucesso",
             "user": user.to_dict(),
-            "token": self._token_signer.dumps({"user_id": user.id}),
+            "token": self._token_service.issue(user),
         }
 
     @staticmethod

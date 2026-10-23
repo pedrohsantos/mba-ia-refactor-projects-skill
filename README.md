@@ -8,7 +8,7 @@ Executada nos 3 projetos legados do desafio (2× Python/Flask, 1× Node.js/Expre
 |---|---|---|---|
 | [code-smells-project](code-smells-project/) | Python + Flask 3.1 + sqlite3 | 6 / 4 / 4 / 4 = **18** | 22/22 status iguais ao baseline |
 | [ecommerce-api-legacy](ecommerce-api-legacy/) | Node.js + Express 4 + sqlite3 | 4 / 5 / 5 / 4 = **18** | 7/7 status iguais ao baseline |
-| [task-manager-api](task-manager-api/) | Python + Flask 3.0 + SQLAlchemy | 2 / 5 / 6 / 5 = **18** | 29/29 status iguais ao baseline |
+| [task-manager-api](task-manager-api/) | Python + Flask 3.0 + SQLAlchemy | 2 / 5 / 6 / 5 = **18** | 22/22 endpoints + 13 casos de segurança (42/42) |
 
 ---
 
@@ -78,7 +78,7 @@ Feita lendo todo o código dos 3 projetos **antes** de escrever a skill. Os acha
 │   ├── anti-patterns-catalog.md          # Fase 2 — 22 anti-patterns com sinais de detecção e severidade
 │   ├── audit-report-template.md          # Fase 2 — template obrigatório do relatório
 │   ├── mvc-guidelines.md                 # Fase 3 — camadas, responsabilidades, layouts por stack
-│   ├── refactoring-playbook.md           # Fase 3 — 14 transformações com código antes/depois
+│   ├── refactoring-playbook.md           # Fase 3 — 14 transformações (+ T-13b autorização por papel) com código antes/depois
 │   └── validation.md                     # Fase 3 — baseline, boot, replay dos endpoints, scan estático
 └── scripts/
     └── smoke_test.py                     # runner HTTP agnóstico (stdlib) usado no baseline e na validação
@@ -100,6 +100,7 @@ Feita lendo todo o código dos 3 projetos **antes** de escrever a skill. Os acha
 - **Linha exata obrigatória + evidência.** Cada finding traz `Evidence:` com o trecho copiado; isso força o agente a reabrir o arquivo e impede números de linha "estimados".
 - **Confirmação explícita** com a frase exata `Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]`; qualquer coisa diferente de "sim" encerra.
 - **Honestidade no resultado.** O bloco final usa ✓/✗ e uma seção "Findings addressed" com *fixed / partially fixed / deferred*, em vez de prometer "zero anti-patterns".
+- **CRITICAL/HIGH não podem ser adiados.** Se a correção remove uma vulnerabilidade, ela é aplicada mesmo que mude o contrato (a mudança é listada). "Partially fixed"/"deferred" só vale para MEDIUM/LOW ou para itens cuja correção não fecha uma vulnerabilidade (ex.: upgrade de framework).
 
 ### Anti-patterns do catálogo (22) e por quê
 
@@ -125,6 +126,7 @@ Cada entrada tem **sinais de detecção concretos** (regex/padrões como `execut
 | Desafio | Solução |
 |---|---|
 | Garantir que a refatoração não quebra nada | Baseline executado **antes** da Fase 3 com os mesmos casos replayados depois (`validation.md`). |
+| **Feedback da 1ª entrega:** no task-manager-api a escalada de privilégio (AP-04, HIGH) ficou "partially fixed" — só o token foi assinado | Playbook ganhou o **T-13b** (token assinado + `require_auth`/`require_admin` + cadastro público sem `role`), o SKILL.md passou a proibir adiar CRITICAL/HIGH e o `validation.md` exige casos negativos de segurança. O `smoke_test.py` ganhou `capture` (reusar o token do login) e `expect` (status esperado). A skill foi executada de novo no projeto 3, e AP-04 agora está *fixed* (13/13 casos de segurança). |
 | Endpoints perigosos que "devem continuar respondendo" (`/admin/query`) | Regra T-13: manter a rota, exigir token de config (403 se não configurado) e limitar a um `SELECT` executado com `PRAGMA query_only`. |
 | Senhas legadas (MD5) já gravadas no banco | Playbook T-08 com **migração transparente**: valida o MD5 uma vez e re-hasheia com scrypt. |
 | `datetime.utcnow()` deprecated, mas colunas SQLite guardam datetime *naive* | Helper `utcnow()` = `datetime.now(timezone.utc).replace(tzinfo=None)`, mantendo comparações e formato. |
@@ -212,7 +214,7 @@ utils/helpers.py (não usado)       routes/                # finas + category_ro
 | Error handling centralizado | ✅ | ✅ | ✅ |
 | Entry point claro | ✅ `app.py` | ✅ `src/app.js` | ✅ `app.py` |
 | Aplicação inicia sem erros | ✅ | ✅ | ✅ |
-| Endpoints originais respondem | ✅ 22/22 | ✅ 7/7 | ✅ 29/29 |
+| Endpoints originais respondem | ✅ 22/22 | ✅ 7/7 | ✅ 22/22 (42/42 casos) |
 
 ### Logs das aplicações rodando
 
@@ -234,11 +236,16 @@ DELETE /api/users/1 (com token)                      200  Usuário deletado
 INFO Processando pagamento de 497 no cartão ****4444 (gateway simulado)
 --- 13 cases, 0 failures (5xx/network)
 
-# Projeto 3 — após refatoração (python seed.py && python app.py)
+# Projeto 3 — após refatoração, iteração 2 (python seed.py && python app.py)
 GET    /tasks/stats                                  200  {"cancelled":1,"completion_rate":10.0,"done":1,...
 POST   /login                                        200  {"message":"Login realizado com sucesso","token":"eyJ1c2VyX2lkIjo0fQ...
-GET    /reports/summary                              200  {"generated_at":"...","overdue":{"count":2,...
---- 39 cases, 0 failures (5xx/network)
+POST   /users  (anônimo, role admin)                 403  {"error":"Apenas administradores podem definir role"}
+PUT    /users/4 (sem token)                          401  {"error":"Autenticação necessária"}
+PUT    /users/4 (Bearer fake-jwt-token-1)            401  {"error":"Token inválido ou expirado"}
+PUT    /users/4 (usuário comum, role admin)          403  {"error":"Apenas administradores podem alterar role ou active"}
+DELETE /users/1 (usuário comum)                      403  {"error":"Apenas administradores"}
+DELETE /users/4 (admin)                              200  {"message":"Usuário deletado com sucesso"}
+--- 42 cases, 0 failures (5xx/network/unexpected status)
 ```
 
 ### Comportamento em stacks diferentes
@@ -246,7 +253,7 @@ GET    /reports/summary                              200  {"generated_at":"...",
 - **Monólito Python (P1):** reestruturação completa em `src/`. O maior trabalho foi a SQL: parametrização total, JOIN único para pedidos e `with conn:` para a transação. A baixa de estoque passou a ser condicional (`estoque >= ?`).
 - **Node/Express (P2):** o catálogo pegou riscos próprios de JS (callback hell, erro ignorado que derruba o processo, log de PAN). A guideline Express levou ao wrapper de promises com `transaction()` serializada, `asyncHandler` e o middleware de erro registrado por último. O nível de exigência foi o mesmo das stacks Python.
 - **Flask parcialmente organizado (P3):** a estratégia "partially layered" manteve `models/` e `routes/` e adicionou `controllers/`, `config/` e `middlewares/`. A skill encontrou mais itens MEDIUM (deprecations, N+1, duplicação) e menos CRITICAL, o que reflete o estado real do código.
-- **Pendências declaradas nos relatórios:** a migração para Express 5 (P2) e a autorização por papel nas rotas (P3) ficaram como *deferred*. As duas mudariam o contrato com os clientes e pedem decisão de produto.
+- **Pendências declaradas nos relatórios:** só a migração para Express 5 (P2, MEDIUM) ficou como *deferred*, porque é um upgrade de framework e não fecha nenhuma vulnerabilidade. Todos os CRITICAL/HIGH dos 3 projetos estão *fixed*. A autorização por papel do P3, adiada na 1ª iteração, foi implementada na 2ª.
 
 > **Como as execuções foram feitas:** as fases foram executadas por um agente Claude Code (app desktop) seguindo as instruções do `SKILL.md` e das referências em cada projeto. A CLI `claude` não estava instalada no ambiente, então o comando `claude "/refactor-arch"` não foi usado nesta rodada. A confirmação da Fase 2 foi respondida com "y" (registrado em cada relatório). A validação usou Python 3.14 e Node 20.18 no Windows 11.
 

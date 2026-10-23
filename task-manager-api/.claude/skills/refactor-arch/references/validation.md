@@ -24,9 +24,13 @@ Case file format:
 [
   {"method": "GET",  "path": "/produtos"},
   {"method": "POST", "path": "/produtos", "body": {"nome": "Livro", "preco": 50, "estoque": 5}},
-  {"method": "DELETE", "path": "/admin/x", "headers": {"X-Admin-Token": "dev-token"}}
+  {"method": "DELETE", "path": "/admin/x", "headers": {"X-Admin-Token": "dev-token"}},
+  {"method": "POST", "path": "/login", "body": {"email": "admin@x.com", "password": "..."}, "capture": {"admin_token": "token"}},
+  {"method": "DELETE", "path": "/users/2", "headers": {"Authorization": "Bearer {{admin_token}}"}}
 ]
 ```
+`capture` stores a top-level field of the JSON response in a variable; `{{name}}` is replaced in later paths, headers and bodies.
+Use it to test authenticated routes (login once, reuse the token).
 
 ## 2. Boot check (after refactoring)
 
@@ -36,6 +40,10 @@ Case file format:
   so unused-at-boot modules are not broken.
 
 ## 3. Endpoint check
+
+- **Security negative cases are mandatory** for every auth fix: anonymous call → 401, authenticated non-admin on an
+  admin route → 403, anonymous sign-up with `role: admin` → 403, then the same call with an admin token → success.
+  A CRITICAL/HIGH auth finding is only "fixed" when these cases pass.
 
 - Replay the same cases file against the refactored app → `after.txt`.
 - Compare `METHOD PATH STATUS` per line with the baseline (`diff` the first three columns).

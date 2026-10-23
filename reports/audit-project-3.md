@@ -98,7 +98,7 @@ File: routes/user_routes.py:210
 Evidence: `'token': 'fake-jwt-token-' + str(user.id)`
 Description: O "token" de login é previsível (`fake-jwt-token-<id>`); qualquer cliente anônimo pode criar um usuário com `role: admin` ou promover/remover usuários. Severidade HIGH (e não CRITICAL) porque não há execução arbitrária de código/SQL.
 Impact: Qualquer pessoa vira administrador; tokens podem ser forjados para qualquer usuário.
-Recommendation: Token assinado com a SECRET_KEY (itsdangerous) e, em seguida, autorização nas rotas sensíveis (playbook T-13).
+Recommendation: Padrão completo de T-13b: token assinado e com expiração verificado em `Authorization: Bearer`; `require_auth`/`require_admin` nas rotas de gestão de usuários (DELETE só admin; PUT só o próprio usuário ou admin, e role/active só admin); cadastro público sempre cria `role: user` e rejeita (403) `role` enviado sem admin autenticado. Token assinado sozinho **não** fecha o finding (playbook T-13).
 
 ### [HIGH] Debug Mode Hardcoded (AP-11)
 File: app.py:34
@@ -270,12 +270,15 @@ task-manager-api/
 | 6 | T-07 Error handler central | AP-15 |
 | 7 | T-10 utcnow / session.get | AP-16 |
 | 8 | T-11 Cascades | AP-17 |
-| 9 | T-08 / T-09 / T-13 Hash seguro, to_dict sem senha, token assinado | AP-05, AP-06, AP-04 (parcial) |
+| 9 | T-08 / T-09 / T-13b Hash seguro, to_dict sem senha, token assinado + autorização por papel | AP-05, AP-06, AP-04 |
 | 10 | T-12 Limpeza | AP-18 … AP-22 |
 
 Intentional contract changes (if approved):
 - Respostas de usuário não contêm mais `password`.
-- `token` do login passa a ser assinado (itsdangerous) em vez de `fake-jwt-token-<id>`.
+- `token` do login passa a ser assinado e com expiração (itsdangerous) em vez de `fake-jwt-token-<id>`.
+- `POST /users` anônimo só cria `role: user`; enviar outro `role` sem token de admin → 403.
+- `PUT /users/<id>` exige `Authorization: Bearer <token>` (401 sem token); só o próprio usuário ou admin (403); `role`/`active` só admin (403).
+- `DELETE /users/<id>` exige token de admin (401 sem token, 403 para não-admin).
 - Entradas com tipo inválido retornam 400 em vez de 500; erros não tratados retornam JSON `{"error": ...}`.
 - Deletar categoria desassocia as tasks (`category_id = null`).
 
@@ -286,6 +289,12 @@ Phase 2 complete. Proceed with refactoring (Phase 3)? [y/n]
 ---
 
 ## Phase 3 — Execution log
+
+> **Iteração 2 (2026-10-23).** Na 1ª execução, AP-04 terminou como "partially fixed": só o token foi assinado, e
+> qualquer cliente anônimo ainda criava admin (`POST /users`), promovia (`PUT`) e apagava (`DELETE`) usuários.
+> A skill foi corrigida: o playbook ganhou o T-13b (autorização por papel) e o SKILL.md passou a proibir adiar
+> CRITICAL/HIGH cuja correção remove uma vulnerabilidade. A skill foi executada de novo neste projeto, e o log
+> abaixo é dessa nova execução.
 
 ```
 ================================
@@ -304,16 +313,20 @@ task-manager-api/
 │   └── category.py
 ├── controllers/                 # novo
 │   ├── task_controller.py
-│   ├── user_controller.py
+│   ├── user_controller.py       # regras de autorização: role no cadastro, dono-ou-admin, role/active só admin
 │   ├── report_controller.py
 │   └── category_controller.py
 ├── routes/                      # views finas
 │   ├── task_routes.py
-│   ├── user_routes.py
+│   ├── user_routes.py           # PUT @require_auth, DELETE @require_admin
 │   ├── report_routes.py
 │   └── category_routes.py       # extraído de report_routes.py
-├── middlewares/error_handler.py # novo
-├── services/notification_service.py  # config via env, injetado no TaskController
+├── middlewares/
+│   ├── error_handler.py         # novo
+│   └── auth.py                  # novo: Bearer token → usuário; require_auth / require_admin
+├── services/
+│   ├── notification_service.py  # config via env, injetado no TaskController
+│   └── token_service.py         # novo: token assinado + expiração (AUTH_TOKEN_MAX_AGE_SECONDS)
 └── utils/
     ├── exceptions.py
     ├── validators.py
@@ -322,20 +335,28 @@ task-manager-api/
 
 ## Findings addressed
 AP-01 fixed · AP-05 fixed · AP-06 fixed (scrypt + migração transparente do MD5) · AP-07 fixed · AP-11 fixed · AP-08 fixed
-AP-04 partially fixed — token agora assinado (itsdangerous); autorização por papel nas rotas deferida
-      (exige decisão de produto e quebraria todos os clientes atuais)
+AP-04 fixed — token assinado e com expiração + require_auth/require_admin nas rotas de gestão de usuários
+      + cadastro público sem role privilegiado (T-13b)
 AP-12 fixed (joinedload + group_by) · AP-13 fixed · AP-14 fixed · AP-15 fixed · AP-16 fixed · AP-17 fixed
 AP-18 fixed · AP-19 fixed · AP-20 fixed · AP-21 fixed (helpers.py, imports, marshmallow/requests removidos) · AP-22 fixed
+Todos os CRITICAL/HIGH: fixed.
 
 ## Intentional contract changes
 - Respostas de usuário não contêm mais `password`
-- `token` do login é assinado (itsdangerous) em vez de `fake-jwt-token-<id>`
+- `token` do login é assinado e expira (itsdangerous) em vez de `fake-jwt-token-<id>`
+- POST /users anônimo cria apenas role "user"; `role` diferente sem admin → 403
+- PUT /users/<id>: Bearer token obrigatório (401); só o próprio usuário ou admin (403); role/active só admin (403)
+- DELETE /users/<id>: apenas admin (401 sem token / 403 não-admin)
 - Tipos inválidos → 400 (antes 500); erros não tratados e 404 → JSON {"error": ...}
 - Deletar categoria desassocia as tasks (category_id = null); cor de categoria validada (#RRGGBB)
 
 ## Validation
   ✓ Application boots without errors (python seed.py && python app.py, com DeprecationWarning como erro)
-  ✓ All endpoints respond (29/29 casos de baseline com o mesmo status; 39/39 casos sem 5xx)
-  ✓ No CRITICAL/HIGH detection signal remaining (hit de "salt=" no URLSafeTimedSerializer é falso positivo)
+  ✓ All endpoints respond (22/22 endpoints do inventário; 42/42 casos com o status esperado, 0 com 5xx)
+  ✓ Security negative cases (13/13): role admin anônimo → 403 · role admin por usuário comum → 403 ·
+    PUT sem token / token forjado / "fake-jwt-token-1" → 401 · usuário comum alterando o próprio role → 403 ·
+    usuário comum alterando outro usuário → 403 · DELETE sem token → 401 · DELETE por não-admin → 403 ·
+    token de usuário removido → 401 · admin cria manager / promove / remove → 201/200/200
+  ✓ No CRITICAL/HIGH detection signal remaining
 ================================
 ```

@@ -107,8 +107,10 @@ Express specifics:
 - Same response envelope and field names (`{"dados": ..., "sucesso": true}` stays that way even if not ideal).
 - Same port and same start command (or README updated).
 - Allowed **intentional** changes (must be listed in the Phase 3 summary): removing sensitive fields from responses,
-  requiring an admin token on destructive/admin routes, returning a generic message instead of raw exception text on 500,
-  rejecting input that previously caused a 500.
+  requiring an admin token on destructive/admin routes, requiring an authenticated user/admin on user-management routes
+  (T-13b), rejecting privilege fields (`role`, `is_admin`, `active`) on public endpoints, returning a generic message
+  instead of raw exception text on 500, rejecting input that previously caused a 500.
+- Contract preservation never justifies keeping a CRITICAL/HIGH vulnerability open (see SKILL.md Phase 3, step 4).
 - Seed data must still be created so the app is usable after boot.
 
 ## 7. Definition of done (checked in validation)

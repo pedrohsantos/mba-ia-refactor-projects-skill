@@ -70,3 +70,48 @@ DELETE /users/3                                      200  {"message":"Usu\u00e1r
 GET    /tasks/stats                                  200  {"cancelled":0,"completion_rate":0.0,"done":0,"in_progress":2,"overdue":2,"pending":5,"total":7}
 GET    /rota-inexistente                             404  {"error":"The requested URL was not found on the server. If you entered the URL manually please chec
 --- 39 cases, 0 failures (5xx/network)
+
+# Projeto 3 — iteração 2 (autorização por papel, T-13b) — casos com status esperado
+GET    /                                             200  {"message":"Task Manager API","version":"1.0"}
+GET    /health                                       200  {"status":"ok","timestamp":"2026-10-23 14:07:11.621894"}
+GET    /tasks                                        200  [{"category_id":1,"category_name":"Backend","created_at":"2026-10-23 17:07:06.278255","description":
+GET    /tasks/1                                      200  {"category_id":1,"created_at":"2026-10-23 17:07:06.278255","description":"Adicionar autentica\u00e7\
+GET    /tasks/999                                    404  {"error":"Task n\u00e3o encontrada"}
+GET    /tasks/search?q=API&status=pending            200  [{"category_id":1,"created_at":"2026-10-23 17:07:06.278262","description":"Endpoints retornam todos 
+GET    /tasks/stats                                  200  {"cancelled":1,"completion_rate":10.0,"done":1,"in_progress":2,"overdue":2,"pending":6,"total":10}
+POST   /tasks                                        201  {"category_id":1,"created_at":"2026-10-23 17:07:11.710118","description":"","due_date":"2030-01-01 0
+POST   /tasks                                        400  {"error":"T\u00edtulo muito curto"}
+POST   /tasks                                        400  {"error":"Prioridade deve ser entre 1 e 5"}
+PUT    /tasks/11                                     200  {"category_id":1,"created_at":"2026-10-23 17:07:11.710118","description":"","due_date":"2030-01-01 0
+PUT    /tasks/11                                     400  {"error":"Status inv\u00e1lido"}
+DELETE /tasks/11                                     200  {"message":"Task deletada com sucesso"}
+GET    /users                                        200  [{"active":true,"created_at":"2026-10-23 17:07:06.275834","email":"joao@email.com","id":1,"name":"Jo
+GET    /users/1                                      200  {"active":true,"created_at":"2026-10-23 17:07:06.275834","email":"joao@email.com","id":1,"name":"Jo\
+GET    /users/1/tasks                                200  [{"created_at":"2026-10-23 17:07:06.278255","description":"Adicionar autentica\u00e7\u00e3o real com
+POST   /users                                        201  {"active":true,"created_at":"2026-10-23 17:07:11.940863","email":"ana@email.com","id":4,"name":"Ana"
+POST   /users                                        409  {"error":"Email j\u00e1 cadastrado"}
+POST   /users                                        400  {"error":"Email inv\u00e1lido"}
+POST   /login                                        200  {"message":"Login realizado com sucesso","token":"eyJ1c2VyX2lkIjo0fQ.atuUQA.g3kMfyRiuPyO3hg_9pKOMzg7
+POST   /login                                        401  {"error":"Credenciais inv\u00e1lidas"}
+POST   /login                                        200  {"message":"Login realizado com sucesso","token":"eyJ1c2VyX2lkIjoxfQ.atuUQA.IQOmhcQrA4Ae82CuAuoBaQbc
+PUT    /users/4                                      200  {"active":true,"created_at":"2026-10-23 17:07:11.940863","email":"ana@email.com","id":4,"name":"Ana 
+GET    /reports/summary                              200  {"generated_at":"2026-10-23 17:07:12.380361","overdue":{"count":2,"tasks":[{"days_overdue":3,"due_da
+GET    /reports/user/1                               200  {"statistics":{"cancelled":0,"completion_rate":0.0,"done":0,"high_priority":2,"in_progress":0,"overd
+GET    /categories                                   200  [{"color":"#3498db","created_at":"2026-10-23 17:07:06.274877","description":"Tarefas de backend","id
+POST   /categories                                   201  {"color":"#123456","created_at":"2026-10-23 17:07:12.412672","description":"","id":5,"name":"QA"}
+PUT    /categories/5                                 200  {"color":"#123456","created_at":"2026-10-23 17:07:12.412672","description":"Qualidade","id":5,"name"
+DELETE /categories/5                                 200  {"message":"Categoria deletada"}
+POST   /users                                        403  {"error":"Apenas administradores podem definir role"}
+POST   /users                                        403  {"error":"Apenas administradores podem definir role"}
+PUT    /users/4                                      401  {"error":"Autentica\u00e7\u00e3o necess\u00e1ria"}
+PUT    /users/4                                      401  {"error":"Token inv\u00e1lido ou expirado"}
+PUT    /users/4                                      401  {"error":"Token inv\u00e1lido ou expirado"}
+PUT    /users/4                                      403  {"error":"Apenas administradores podem alterar role ou active"}
+PUT    /users/1                                      403  {"error":"Sem permiss\u00e3o para alterar este usu\u00e1rio"}
+DELETE /users/4                                      401  {"error":"Autentica\u00e7\u00e3o necess\u00e1ria"}
+DELETE /users/1                                      403  {"error":"Apenas administradores"}
+POST   /users                                        201  {"active":true,"created_at":"2026-10-23 17:07:12.619377","email":"gerente@x.com","id":5,"name":"Gere
+PUT    /users/4                                      200  {"active":true,"created_at":"2026-10-23 17:07:11.940863","email":"ana@email.com","id":4,"name":"Ana 
+DELETE /users/4                                      200  {"message":"Usu\u00e1rio deletado com sucesso"}
+PUT    /users/4                                      401  {"error":"Token inv\u00e1lido ou expirado"}
+--- 42 cases, 0 failures (5xx/network/unexpected status)

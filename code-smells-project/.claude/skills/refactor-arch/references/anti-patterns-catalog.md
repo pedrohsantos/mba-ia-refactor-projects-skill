@@ -76,6 +76,11 @@ One class/module concentrates routing, persistence, business rules, validation a
 - Endpoint executing SQL/commands received in the request body (`cursor.execute(dados["sql"])`, `eval`, `exec`, `child_process.exec(req...)`).
 - `DELETE FROM <table>` with no `WHERE` reachable from HTTP.
 - Admin/financial reports or user deletion reachable anonymously (severity HIGH when it only *reads* sensitive data).
+- **Broken authentication / privilege escalation** (HIGH, CRITICAL if it grants admin to anonymous users):
+  - Predictable or unsigned tokens: `'fake-jwt-token-' + str(user.id)`, base64 of the id, tokens never verified by any route.
+  - Mass assignment of privileges on a public endpoint: `role = data.get('role', 'user')`, `is_admin`, `active` accepted from the body of sign-up (`POST /users`) without an authenticated admin.
+  - User-management routes (`PUT/DELETE /users/<id>`, role/active changes) with no authentication and no ownership/role check.
+  - Fix with the full T-13 pattern — a signed token alone does **not** close the finding.
 
 ### AP-05 — Sensitive data exposure
 **Detection signals**

@@ -1,4 +1,6 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
+
+from middlewares.auth import load_current_user, require_admin, require_auth
 
 
 def create_user_blueprint(controller):
@@ -14,13 +16,16 @@ def create_user_blueprint(controller):
 
     @user_bp.post("/users")
     def create_user():
-        return jsonify(controller.create_user(request.get_json(silent=True))), 201
+        actor = load_current_user()
+        return jsonify(controller.create_user(request.get_json(silent=True), actor=actor)), 201
 
     @user_bp.put("/users/<int:user_id>")
+    @require_auth
     def update_user(user_id):
-        return jsonify(controller.update_user(user_id, request.get_json(silent=True))), 200
+        return jsonify(controller.update_user(user_id, request.get_json(silent=True), actor=g.current_user)), 200
 
     @user_bp.delete("/users/<int:user_id>")
+    @require_admin
     def delete_user(user_id):
         controller.delete_user(user_id)
         return jsonify({"message": "Usuário deletado com sucesso"}), 200

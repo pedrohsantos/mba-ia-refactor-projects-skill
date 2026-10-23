@@ -26,6 +26,8 @@ class Settings:
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///tasks.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
+    AUTH_TOKEN_MAX_AGE_SECONDS = int(os.getenv("AUTH_TOKEN_MAX_AGE_SECONDS", "86400"))
+
     # Notificações por e-mail: desabilitadas se SMTP_HOST não estiver configurado.
     SMTP_HOST = os.getenv("SMTP_HOST")
     SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
